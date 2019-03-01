@@ -82,6 +82,7 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
+*.env
 .env
 .venv
 env/
@@ -102,3 +103,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# nltk data
+nltk_data/
+
+# PyCharm
+.idea
