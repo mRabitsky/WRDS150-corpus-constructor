@@ -15,58 +15,79 @@ natural_language_understanding = NaturalLanguageUnderstandingV1(
 
 def analyze(tweets):
     transformed = {}
-    for (tweet_id, data) in map(lambda t: {
-        'de': _analyze_de(t),
-        'fr': _analyze_fr(t),
-        'ja': _analyze_jp(t),
-        'nl': _analyze_nl(t),
-    }[t.lang], tweets):
+    for (tweet_id, data) in map(lambda t: _analyze(t), tweets):
         transformed[tweet_id] = data
 
     return transformed
 
 
-def _analyze_de(t):
-    row = {'data': {'de': 1, 'fr': 0, 'jp': 0, 'nl': 0, 'sentiment': NaN}}
+def _analyze(t):
+    # first we create the columns we care about
+    row = {
+        'de': 0,  # which language is it
+        'fr': 0,
+        'ja': 0,
+        'ko': 0,
+        'sentiment': NaN,  # what is the numerical sentiment of the tweet
+        'hashtags': len(t.entities['hashtags']),  # how many hashtags does the tweet have
+        'user_mentions': len(t.entities['user_mentions']),  # how many user mentions are in the tweet body
+        'author_followers_count': t.author.followers_count,  # how many followers does the author of the tweet have
+        'author_friends_count': t.author.friends_count,  # how many friends does the author of the tweet have
+        'author_statuses_count': t.author.statuses_count,  # how many statuses does the author of the tweet have
+        'retweet_count': t.retweet_count,  # how many retweets this tweet has
+        'favorite_count': t.retweeted_status.favorite_count if hasattr(t, 'retweeted_status') else t.favorite_count,
+        # how many favourites this tweet has
+        t.lang: 1  # set the actual language of the tweet to 1
+    }
+
+    tweet_text = (t.full_text if hasattr(t, 'full_text') else t.text)
+    if hasattr(t, 'display_text_range'):
+        # these are the cutoffs, if there is additional information in the tweet outside of the actual text content
+        [a, b] = t.display_text_range
+        tweet_text = tweet_text[a:b]  # clean the tweet of extras
 
     response = natural_language_understanding.analyze(
-        text=t.text,
+        text=tweet_text,
         features=Features(sentiment=SentimentOptions())
     ).get_result()
-    row['data']['sentiment'] = response['sentiment']['document']['score']
+    row['sentiment'] = response['sentiment']['document']['score']
+
+    {
+        'de': _analyze_de,
+        'fr': _analyze_fr,
+        'ja': _analyze_ja,
+        'ko': _analyze_ko
+    }[t.lang](tweet_text)
 
     return t.id, row
 
 
-def _analyze_fr(t):
-    row = {'data': {'de': 0, 'fr': 1, 'jp': 0, 'nl': 0, 'sentiment': NaN}}
-
-    response = natural_language_understanding.analyze(
-        text=t.text,
-        features=Features(sentiment=SentimentOptions())
-    ).get_result()
-    row['data']['sentiment'] = response['sentiment']['document']['score']
-
-    return t.id, row
+def _analyze_de(text):
+    pass
 
 
-def _analyze_jp(t):
-    row = {'data': {'de': 0, 'fr': 0, 'jp': 1, 'nl': 0, 'sentiment': NaN}}
+def _analyze_fr(text):
+    import nltk.data
+    from nltk.tokenize import word_tokenize
+    from nltk.tag.stanford import StanfordPOSTagger
+    nltk.data.path.append('nltk_data')
 
-    response = natural_language_understanding.analyze(
-        text=t.text,
-        features=Features(sentiment=SentimentOptions())
-    ).get_result()
-    row['data']['sentiment'] = response['sentiment']['document']['score']
+    sentence_tokenizer = nltk.data.load('nltk_data/tokenizers/punkt/PY3/french.pickle')
+    tagger = StanfordPOSTagger(
+        model_filename='/home/mdr/Desktop/stanford-postagger-full-2018-10-16/models/french.tagger',
+        path_to_jar='/home/mdr/Desktop/stanford-postagger-full-2018-10-16/stanford-postagger.jar'
 
-    return t.id, row
+    )
+
+    print(tagger.tag_sents(map(word_tokenize, sentence_tokenizer.tokenize(text))))
 
 
-def _analyze_nl(t):
-    row = {'data': {'de': 0, 'fr': 0, 'jp': 0, 'nl': 1, 'sentiment': NaN}}
+def _analyze_ja(text):
+    from rakutenma import RakutenMA
 
-    # import subprocess
-    # process = subprocess.run(['python', 'pattern_nlp.py', t.text], capture_output=True, encoding='utf-8', check=True)
-    # row['data']['sentiment'] = process.stdout
+    rma = RakutenMA()
+    rma.load("model_ja.json")
+    print(rma.tokenize(text))
 
-    return t.id, row
+def _analyze_ko(text):
+    pass
