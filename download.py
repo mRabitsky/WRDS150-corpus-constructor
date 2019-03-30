@@ -1,9 +1,6 @@
-import numpy as np
 import pandas as pd
 import tweepy
 import nlp
-import json
-
 from _constants import markers, flatten
 
 # first get the secrets
@@ -19,7 +16,7 @@ auth.set_access_token(access_token, access_secret)
 api = tweepy.API(auth)
 
 # set how many tweets we want to read
-HOW_MANY_TWEETS = 1
+HOW_MANY_TWEETS = 10
 
 
 # function to remove retweets
@@ -125,4 +122,4 @@ for language_data in tweets.values():
             print(datum.id, ': ', datum.text)
 
 nlp_data = nlp.analyze(flatten(list(tweets.values())))
-pd.DataFrame.from_dict(nlp_data, orient='index').to_csv('tweets/data.csv')
+pd.DataFrame.from_dict(nlp_data, orient='index').to_csv('tweets/data.csv')  # save the data to csv

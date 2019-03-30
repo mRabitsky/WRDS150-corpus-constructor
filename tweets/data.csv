@@ -1,3 +1,5 @@
-,de,fr,ja,ko,sentiment,hashtags,user_mentions,author_followers_count,author_friends_count,author_statuses_count,retweet_count,favorite_count
-1110957623266799616,0,0,1,0,0.0,0,0,27,401,3799,0,0
-1110957666053033989,0,1,0,0,0.458638,0,3,6,90,142,0,0
+,de,fr,ja,ko,sentiment,hashtags,user_mentions,author_followers_count,author_friends_count,author_statuses_count,retweet_count,favorite_count,NC,ADJ,ADV,PUNC,V,CC,CS,ET,I,NP,PREF,PRO
+1110852321372766208,0,1,0,0,-0.781929,0,0,1158,312,2551,3573,3922,8,7,2,3,1,0,0,0,0,0,0,1
+1111685327503147008,0,1,0,0,0.290278,0,0,715,446,23111,6,4,5,4,1,1,2,3,0,4,0,0,0,0
+1111829477682626561,0,0,1,0,-0.571611,0,0,200,361,29443,0,0,21,2,0,2,2,1,0,0,0,2,0,1
+1111829477787484161,0,0,1,0,0.71828,0,1,61,170,114006,0,0,4,2,1,4,16,0,0,0,1,0,4,1
