@@ -1,0 +1,54 @@
+A (adjective)
+Adv (adverb)
+CC (coordinating conjunction)
+Cl (weak clitic pronoun)						~
+CS (subordinating conjunction)
+D (determiner)									~
+ET (foreign word)
+I (interjection)
+NC (common noun)
+NP (proper noun)
+P (preposition)									~ 
+PREF (prefix)
+PRO (strong pronoun)
+V (verb)
+PONCT (punctuation mark)
+
+A-c		Adjective-Common						A
+A-dp	Adjective-Dependent						A
+C		Conjunction								CC (unless they use any of these: http://www.japaneselanguageguide.com/grammar/subordinating-conjunction.asp; then it's a CS)
+D		Pronoun									PRO
+E		English word							ET
+F		Adverb									Adv
+I-c		Interjection-Common						I
+J-c		Adjectival Noun-Common					A
+J-tari	Adjectival Noun-Tari					A
+J-xs	Adjectival Noun-AuxVerb stem			A
+M-aa	Auxiliary sign-AA						Punct
+M-c		Auxiliary sign-Common					~
+M-cp	Auxiliary sign-Open Parenthesis			Punct
+M-op	Auxiliary sign-Close Parenthesis		Punct
+M-p		Auxiliary sign-Period					Punct
+N-n		Noun-Noun								NC
+N-nc	Noun-Common Noun						NC
+N-pn	Noun-Proper Noun						NP
+N-xs	Noun-AuxVerb stem						~
+O		Others									~
+P		Prefix									PREF
+P-fj	Particle-Adverbial						~
+P-jj	Particle-Phrasal						~
+P-k		Particle-Case Marking					~
+P-rj	Particle-Binding						~
+P-sj	Particle-Conjunctive					~
+Q-a		Suffix-Adjective						~
+Q-j		Suffix-Adjectival Noun					~
+Q-n		Suffix-Noun								~
+Q-v		Suffix-Verb								~
+R		Adnominal adjective						A
+S-c		Sign-Common								~
+S-l 	Sign-Letter								~
+U		URL										~ (important)
+V-c		Verb-Common								V
+V-dp	Verb-Dependent							V
+W		Whitespace								~
+X		AuxVerb									V

@@ -1,10 +1,16 @@
 import collections
 
+import nltk.data
+from nltk.tag.stanford import StanfordPOSTagger
+from nltk.tokenize import word_tokenize
 from numpy import NaN
 from watson_developer_cloud import NaturalLanguageUnderstandingV1
 from watson_developer_cloud.natural_language_understanding_v1 import Features, SentimentOptions
 
-from _constants import jsc, flatten
+from _constants import jsc, flatten, markers
+
+nltk.data.path.append('nltk_data')  # add local data folder to list of search locations
+tagger_path = '/home/mdr/Desktop/stanford-postagger-full-2018-10-16/'  # TODO: change this to read the locations from either a file or an environment variable
 
 with open('ibm-credentials.env') as f:
     api_key = f.readline().strip().split('=', 1)[1]
@@ -76,20 +82,14 @@ def _analyze_de(text):
 
 
 def _analyze_fr(text):
-    import nltk.data
-    from nltk.tokenize import word_tokenize
-    from nltk.tag.stanford import StanfordPOSTagger
-    nltk.data.path.append('nltk_data')  # add local data folder to list of search locations
-
-    sentence_tokenizer = nltk.data.load('nltk_data/tokenizers/punkt/PY3/french.pickle')  # load French sentence splitter
     tagger = StanfordPOSTagger(
-        model_filename='/home/mdr/Desktop/stanford-postagger-full-2018-10-16/models/french.tagger',
-        path_to_jar='/home/mdr/Desktop/stanford-postagger-full-2018-10-16/stanford-postagger.jar'
-    )  # TODO: change these to read the locations from either a file or an environment variable
+        model_filename=(tagger_path + 'models/french.tagger'),
+        path_to_jar=(tagger_path + 'stanford-postagger.jar')
+    )
 
     # The next oneliner is a bit dense, but in essence it is having the tagger tag each sentence one by one, and then
     # it is pulling off just the tags from the resulting list of tuples, and feeding them into a Counter (histogram)
-    tags = flatten(tagger.tag_sents(map(word_tokenize, sentence_tokenizer.tokenize(text))))
+    tags = tagger.tag(word_tokenize(text, language='french'))
     counter = collections.Counter([x[1] for x in tags])
 
     # now we need to remove and modify some of the syntactic categories, because they either don't exist in the other
@@ -145,3 +145,33 @@ def _analyze_ja(text):
 
 def _analyze_ko(text):
     return {}
+
+
+german_sentence_tokenizer = nltk.data.load('nltk_data/tokenizers/punkt/PY3/german.pickle')  # load French sentence splitter
+german_fast_tagger = StanfordPOSTagger(
+    model_filename=(tagger_path + 'models/german-fast.tagger'),
+    path_to_jar=(tagger_path + 'stanford-postagger.jar')
+)
+def check_german_verb_construction(text):
+    word = next(iter([i for i in markers['de'][0] if i in text.lower()] or []), None)
+    if word is None:
+        word = next(iter([i for i in markers['de'][1] if i in text.lower()] or []), None)
+        if word is None:
+            return False
+        which = 1
+    else:
+        which = 0
+
+    tags = german_fast_tagger.tag_sents(map(lambda x: word_tokenize(x, language='german'), german_sentence_tokenizer.tokenize(text)))
+
+    for sentence in tags:
+        words = [x[0] for x in sentence]
+        tags  = [x[1] for x in sentence]
+        condition = word in words and \
+                    (('VVIZU' in tags or
+                     ('PTKZU' in tags and ('VVINF' in tags or 'VAINF' in tags))) if which == 1
+                     else 'VVINF' in tags)
+        if condition:
+            print('tags:', tags)
+            return True
+    return False

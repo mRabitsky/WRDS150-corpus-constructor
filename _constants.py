@@ -13,12 +13,20 @@ jsc = [
 # http://www.japaneselanguageguide.com/grammar/subordinating-conjunction.asp
 
 markers = {
-    'de': [],
-    'fr': ['peux', 'peut', 'pouvons', 'pouvez', 'peuvent', 'pouvais', 'pouvait', 'pouvions', 'pouviez', 'pouvaient', 'pourrai', 'pourras', 'pourra', 'pourrons', 'pourrez', 'pourront', 'pourrais', 'pourrait', 'pourrions', 'pourriez', 'pourraient', 'puisse', 'puisses', 'puissions', 'puissiez', 'puissent', 'pu',
-           'trouve', 'trouves', 'trouvons', 'trouvez', 'trouvent', 'trouvé', 'trouvais', 'trouvait', 'trouvions', 'trouviez', 'trouvaient', 'trouverais', 'trouverait', 'trouverions', 'trouveriez', 'trouveraient',
-           'crois', 'croit', 'croyons', 'croyez', 'croient', 'croyais', 'croyait', 'croyions', 'croyiez', 'croyaient', 'croirai', 'croiras', 'croira', 'croirons', 'croirez', 'croiront', 'cru', 'crus', 'crut', 'crûmes', 'crûtes', 'crurent', 'croie', 'croies', 'croient', 'crusse', 'crusses', 'crût', 'crussions', 'crussiez', 'crussent', 'croirais', 'croirait', 'croirions', 'croiriez', 'croiraient', 'croyant'],
-    'ja': ['よう', 'みたい'],
-    'ko': [],
+    'de': [
+        {'werde', 'wirst', 'wird', 'werden', 'werdet', 'wurde', 'wurdest', 'wurden', 'wurdet', 'geworden', 'werdest', 'würde', 'würdest', 'würden', 'würdet'},
+        {'scheine', 'scheinst', 'scheint', 'scheinen', 'schien', 'schienst', 'schienen', 'schient', 'schienen', 'geschienen', 'scheinest', 'scheinet', 'schiene', 'schienest', 'schienet',
+         'drohe', 'drohst', 'droht', 'drohen', 'drohte', 'drohtest', 'drohten', 'drohtet', 'gedroht', 'drohest', 'drohet',
+         'verspreche', 'versprichst', 'verspricht', 'versprechen', 'versprecht', 'versprach', 'versprachst', 'versprachen', 'verspracht', 'versprochen', 'versprechest', 'versprechet', 'verspräche', 'versprächest', 'versprächst', 'versprächen', 'versprächet', 'versprächt'}
+    ],
+    'fr': {
+        'peux', 'peut', 'pouvons', 'pouvez', 'peuvent', 'pouvais', 'pouvait', 'pouvions', 'pouviez', 'pouvaient', 'pourrai', 'pourras', 'pourra', 'pourrons', 'pourrez', 'pourront', 'pourrais', 'pourrait', 'pourrions', 'pourriez', 'pourraient', 'puisse', 'puisses', 'puissions', 'puissiez', 'puissent', 'pu',
+        'trouve', 'trouves', 'trouvons', 'trouvez', 'trouvent', 'trouvé', 'trouvais', 'trouvait', 'trouvions', 'trouviez', 'trouvaient', 'trouverais', 'trouverait', 'trouverions', 'trouveriez', 'trouveraient',
+        'crois', 'croit', 'croyons', 'croyez', 'croient', 'croyais', 'croyait', 'croyions', 'croyiez', 'croyaient', 'croirai', 'croiras', 'croira', 'croirons', 'croirez', 'croiront', 'cru', 'crus', 'crut', 'crûmes', 'crûtes', 'crurent', 'croie', 'croies', 'croient', 'crusse', 'crusses', 'crût', 'crussions', 'crussiez', 'crussent', 'croirais', 'croirait', 'croirions', 'croiriez', 'croiraient', 'croyant',
+        'sans doute'
+    },
+    'ja': {'よう', 'みたい'},
+    'ko': set(),
 }
 
 
