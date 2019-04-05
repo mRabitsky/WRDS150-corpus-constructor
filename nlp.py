@@ -1,13 +1,17 @@
 import collections
+import logging
+import re
 
 import nltk.data
+from konlpy.tag import Mecab, Okt
 from nltk.tag.stanford import StanfordPOSTagger
 from nltk.tokenize import word_tokenize
 from numpy import NaN
+from rakutenma import RakutenMA
 from watson_developer_cloud import NaturalLanguageUnderstandingV1
 from watson_developer_cloud.natural_language_understanding_v1 import Features, SentimentOptions
 
-from _constants import jsc, flatten, markers
+from _constants import jsc, markers
 
 nltk.data.path.append('nltk_data')  # add local data folder to list of search locations
 tagger_path = '/home/mdr/Desktop/stanford-postagger-full-2018-10-16/'  # TODO: change this to read the locations from either a file or an environment variable
@@ -22,8 +26,13 @@ natural_language_understanding = NaturalLanguageUnderstandingV1(
     url=url
 )
 
+num_tweets = 0
+tweet_counter = 1
 
 def analyze(tweets):
+    global num_tweets
+    num_tweets = len(tweets)
+
     transformed = {}
     for (tweet_id, data) in map(lambda t: _analyze(t), tweets):
         transformed[tweet_id] = data
@@ -74,22 +83,46 @@ def _analyze(t):
     # The mapping inside the `update` call is an equivalent structure, something I learned from working with old
     # Javascript code and passing around functions
 
+    global tweet_counter
+    global num_tweets
+    logging.info(f"Analyzed tweet [{tweet_counter}/{num_tweets}]")
+    tweet_counter += 1
+
     return t.id, row
 
 
+german_tagger = StanfordPOSTagger(
+    model_filename=(tagger_path + 'models/german-hgc.tagger'),
+    path_to_jar=(tagger_path + 'stanford-postagger.jar')
+)
 def _analyze_de(text):
-    return {}
+    tags = german_tagger.tag(word_tokenize(text, language='german'))
+    counter = collections.Counter([x[1] for x in tags])
+
+    return {  # we need to map the STTS (German) tagset to a subset of the French tagset, so that we can compare them all
+        'ADJ': counter['ADJA'] + counter['ADJD'],
+        'ADV': counter['ADV'],
+        'CC': counter['KON'] + counter['KOKOM'],
+        'CS': counter['KOUI'] + counter['KOUS'],
+        'ET': counter['FM'],
+        'I': counter['ITJ'],
+        'NC': counter['NN'],
+        'NP': counter['NE'],
+        'PREF': counter['APPO'] + counter['APPR'] + counter['APPRART'] + counter['APZR'],
+        'PRO': counter['PDAT'] + counter['PDS'] + counter['PIAT'] + counter['PIDAT'] + counter['PIS'] + counter['PPER'] + counter['PPOSAT'] + counter['PPOSS'] + counter['PRELAT'] + counter['PRELS'] + counter['PRF'] + counter['PROAV'] + counter['PWAT'] + counter['PWAV'] + counter['PWS'],
+        'V': counter['VAFIN'] + counter['VAIMP'] + counter['VAINF'] + counter['VAPP'] + counter['VMFIN'] + counter['VMINF'] + counter['VMPP'] + counter['VVFIN'] + counter['VVIMP'] + counter['VVINF'] + counter['VVIZU'] + counter['VVPP'],
+        'PUNC': counter['$*LRB*'] + counter['$,'] + counter['$.'] + counter['--']
+    }
 
 
+french_tagger = StanfordPOSTagger(
+    model_filename=(tagger_path + 'models/french.tagger'),
+    path_to_jar=(tagger_path + 'stanford-postagger.jar')
+)
 def _analyze_fr(text):
-    tagger = StanfordPOSTagger(
-        model_filename=(tagger_path + 'models/french.tagger'),
-        path_to_jar=(tagger_path + 'stanford-postagger.jar')
-    )
-
     # The next oneliner is a bit dense, but in essence it is having the tagger tag each sentence one by one, and then
     # it is pulling off just the tags from the resulting list of tuples, and feeding them into a Counter (histogram)
-    tags = tagger.tag(word_tokenize(text, language='french'))
+    tags = french_tagger.tag(word_tokenize(text, language='french'))
     counter = collections.Counter([x[1] for x in tags])
 
     # now we need to remove and modify some of the syntactic categories, because they either don't exist in the other
@@ -118,11 +151,9 @@ def _analyze_fr(text):
     return dict(counter)
 
 
+rma = RakutenMA()
+rma.load("model_ja.json")
 def _analyze_ja(text):
-    from rakutenma import RakutenMA
-
-    rma = RakutenMA()
-    rma.load("model_ja.json")
     tags = rma.tokenize(text)
     counter = collections.Counter([x[1] for x in tags])  # see the same premise above in the French section
     subordinating_conjunctions = list(filter(lambda tup: tup[1] == 'C' and tup[0] in jsc, tags))
@@ -143,35 +174,93 @@ def _analyze_ja(text):
     }
 
 
+mecab_tagger = Mecab()
+twitter_tagger = Okt()
 def _analyze_ko(text):
-    return {}
+    mecab_tags = mecab_tagger.pos(text)
+    twitter_tags = twitter_tagger.pos(text)
+    mecab_counter = collections.Counter([x[1] for x in mecab_tags])
+    twitter_counter = collections.Counter([x[1] for x in twitter_tags])
+
+    return {  # we need to map the Japanese tagset to a subset of the French tagset, so that we can compare the two
+        'ADJ': twitter_counter['Adjective'],
+        'ADV': twitter_counter['Adverb'],
+        'CC': twitter_counter['Conjunction'],
+        'CS': mecab_counter['MAJ'],
+        'ET': twitter_counter['Foreign'],
+        'I': max(twitter_counter['Exclamation'], mecab_counter['IC']),
+        'NC': max(0, twitter_counter['Noun'] - mecab_counter['NNP'] - mecab_counter['NP']),
+        'NP': mecab_counter['NNP'],
+        'PREF': mecab_counter['XPN'],
+        'PRO': mecab_counter['NP'],
+        'V': twitter_counter['Verb'],
+        'PUNC': twitter_counter['Punctuation'],
+    }
 
 
-german_sentence_tokenizer = nltk.data.load('nltk_data/tokenizers/punkt/PY3/german.pickle')  # load French sentence splitter
+german_sentence_tokenizer = nltk.data.load('nltk_data/tokenizers/punkt/PY3/german.pickle')  # load German sentence splitter
 german_fast_tagger = StanfordPOSTagger(
     model_filename=(tagger_path + 'models/german-fast.tagger'),
     path_to_jar=(tagger_path + 'stanford-postagger.jar')
 )
-def check_german_verb_construction(text):
-    word = next(iter([i for i in markers['de'][0] if i in text.lower()] or []), None)
+non_words = re.compile(r'[^\w ]+')
+def check_german_verb_construction(text: str) -> bool:
+    """
+    Check to see that the given text matches the German constructions we've been expecting.
+    :param text: Tweet text
+    :return: True if the tweet text matches one of the options, False otherwise.
+    """
+
+    logging.info('Found potential German tweet, checking for verbal constructions...')
+    search_text = non_words.sub('', text.lower()).split(' ')
+    # print('Search text:', search_text)
+    word = next(iter([i for i in markers['de'][1] if i in search_text] or []), None)
     if word is None:
-        word = next(iter([i for i in markers['de'][1] if i in text.lower()] or []), None)
+        word = next(iter([i for i in markers['de'][0] if i in search_text] or []), None)
         if word is None:
+            logging.info("Tweet was bad, couldn't find marker:\n\n" + text + '\n')
             return False
-        which = 1
-    else:
         which = 0
+    else:
+        which = 1
 
     tags = german_fast_tagger.tag_sents(map(lambda x: word_tokenize(x, language='german'), german_sentence_tokenizer.tokenize(text)))
-
     for sentence in tags:
-        words = [x[0] for x in sentence]
+        words = [x[0].lower() for x in sentence]
         tags  = [x[1] for x in sentence]
         condition = word in words and \
                     (('VVIZU' in tags or
-                     ('PTKZU' in tags and ('VVINF' in tags or 'VAINF' in tags))) if which == 1
+                     ('PTKZU' in tags and
+                        ('VVINF' in tags or
+                         'VAINF' in tags or
+                         'VMINF' in tags))) if which == 1
                      else 'VVINF' in tags)
         if condition:
-            print('tags:', tags)
+            # print('tags:', tags)
+            return True
+        # else:
+        #     print('Word:', word)
+        #     print('Words:', words)
+        #     print('Tags:', tags)
+        #     print('\n')
+
+    logging.info("Tweet was bad (condition wasn't met):\n\n" + text + '\n')
+    return False
+
+
+def check_korean_regex(text: str) -> bool:
+    """
+    Check to see that the given text matches the Korean constructions we've been expecting.
+    :param text: Tweet text
+    :return: True if the tweet text matches the expected regex, False otherwise.
+    """
+
+    tuples = [t for t in markers['ko'] if t[0] in text]  # all markers that match, in case there's more than one
+    if len(tuples) == 0:  # none of the markers match, somehow
+        return False
+
+    for t in tuples:
+        search_text = text.split(t[0])[1] if t[2] else text
+        if t[1].search(search_text):
             return True
     return False

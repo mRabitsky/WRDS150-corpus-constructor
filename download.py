@@ -1,9 +1,14 @@
-import json
+import logging
+import sys
 
 import pandas as pd
 import tweepy
+from tweepy import TweepError
+
 import nlp
 from _constants import markers, flatten
+
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
 # first get the secrets
 with open('.env') as f:
@@ -18,7 +23,7 @@ auth.set_access_token(access_token, access_secret)
 api = tweepy.API(auth)
 
 # set how many tweets we want to read
-HOW_MANY_TWEETS = 3
+HOW_MANY_TWEETS = 100
 
 
 # function to remove retweets
@@ -39,6 +44,9 @@ class TweetStreamListener(tweepy.StreamListener):
         self.stream = None
 
     def on_status(self, status):
+        if status.id in map(lambda x: x.id, self.data):
+            return  # stop here if we've seen this one before.
+        # print('a potential tweet has been discovered!')
         if hasattr(status, 'extended_tweet'):
             status.full_text = status.extended_tweet['full_text']
             status.display_text_range = status.extended_tweet['display_text_range']
@@ -54,6 +62,7 @@ class TweetStreamListener(tweepy.StreamListener):
             if status.lang == 'de' and not nlp.check_german_verb_construction(text):
                 return  # stop here if the german tweet has the word but not the right structure
             self.data.append(clear_retweets(status))
+            logging.info(f"Added a tweet in {status.lang}, [{len(self.data)}/{HOW_MANY_TWEETS}]")
         if len(self.data) >= HOW_MANY_TWEETS and self.stream:
             self.stream.disconnect()
 
@@ -75,33 +84,44 @@ def get_french():
     french.register_stream(stream)
     stream.filter(track=markers['fr'], languages=['fr'])  # set the stream to look for these markers
     tweets['fr'] = french.get_data()  # put the collected data into the general tweets array.
-    # get_german()
+    get_german()
 
 
+# def get_german():
+#     german = TweetStreamListener()
+#     stream = tweepy.Stream(auth=api.auth, listener=german, tweet_mode='extended')
+#     german.register_stream(stream)
+#     # stream.filter(track=(list(markers['de'][0]) + [s + ' zu' for s in list(markers['de'][1])]), languages=['de'])
+#     stream.filter(track=list(markers['de'][1]), languages=['de'])
+#     tweets['de'] = german.get_data()
+#     get_japanese()
 def get_german():
-    german = TweetStreamListener()
-    stream = tweepy.Stream(auth=api.auth, listener=german, tweet_mode='extended')
-    german.register_stream(stream)
-    # stream.filter(track=(list(markers['de'][0]) + [s + ' zu' for s in list(markers['de'][1])]), languages=['de'])
-    stream.filter(track=list(markers['de'][1]), languages=['de'])
-    tweets['de'] = german.get_data()
-    # get_japanese()
+    for tweet in tweepy.Cursor(api.search, tweet_mode='extended', q=(' OR '.join(markers['de'][1]) + ' zu'), lang='de').items(2*HOW_MANY_TWEETS - 2*len(tweets['de'])):
+        if len(tweets['de']) < HOW_MANY_TWEETS and tweet.id not in map(lambda x: x.id, tweets['de']) and len(tweet.full_text) >= 8 and nlp.check_german_verb_construction(tweet.full_text):
+            tweets['de'].append(clear_retweets(tweet))
+            logging.info(f"Added a tweet in German, [{len(tweets['de'])}/{HOW_MANY_TWEETS}]")
+    if len(tweets['de']) < HOW_MANY_TWEETS:
+        get_german()
+    else:
+        get_japanese()
 
 
 def get_japanese():
-    for tweet in tweepy.Cursor(api.search, tweet_mode='extended', q=' OR '.join(markers['ja']), lang='ja').items(15):
-        if len(tweets['ja']) < HOW_MANY_TWEETS and len(tweet.full_text) >= 8:
+    for tweet in tweepy.Cursor(api.search, tweet_mode='extended', q=' OR '.join(markers['ja']), lang='ja').items(2*HOW_MANY_TWEETS - 2*len(tweets['ja'])):
+        if len(tweets['ja']) < HOW_MANY_TWEETS and tweet.id not in map(lambda x: x.id, tweets['ja']) and len(tweet.full_text) >= 8:
             tweets['ja'].append(clear_retweets(tweet))
+            logging.info(f"Added a tweet in Japanese, [{len(tweets['ja'])}/{HOW_MANY_TWEETS}]")
     if len(tweets['ja']) < HOW_MANY_TWEETS:
         get_japanese()
-    # else:
-    #     get_korean()
+    else:
+        get_korean()
 
 
 def get_korean():
-    for tweet in tweepy.Cursor(api.search, tweet_mode='extended', q=' OR '.join(markers['ko']), lang='ko').items(15):
-        if len(tweets['ko']) < HOW_MANY_TWEETS and len(tweet.full_text) >= 8:
+    for tweet in tweepy.Cursor(api.search, tweet_mode='extended', q=' OR '.join(map(lambda x: x[0], markers['ko'])), lang='ko').items(2*HOW_MANY_TWEETS - 2*len(tweets['ko'])):
+        if len(tweets['ko']) < HOW_MANY_TWEETS and tweet.id not in map(lambda x: x.id, tweets['ko']) and len(tweet.full_text) >= 8 and nlp.check_korean_regex(tweet.full_text):
             tweets['ko'].append(clear_retweets(tweet))
+            logging.info(f"Added a tweet in Korean, [{len(tweets['ko'])}/{HOW_MANY_TWEETS}]")
     if len(tweets['ko']) < HOW_MANY_TWEETS:
         get_korean()
 
@@ -109,20 +129,19 @@ def get_korean():
 # create a map that stores each list of tweets by language
 tweets = {'de': [], 'fr': [], 'ja': [], 'ko': []}
 # call the french runner, which will call the others subsequently (as each finishes)
-# get_french()
-get_german()
+get_french()
 
-# # store all the texts, keyed by tweet ID
-# texts = {}
-# for language_data in tweets.values():
-#     for datum in language_data:
-#         try:
-#             texts[datum.id] = {'lang': datum.lang, 'text': datum.full_text}
-#         except AttributeError:
-#             texts[datum.id] = {'lang': datum.lang, 'text': datum.text}
-#
-# # write the texts to file
-# pd.Series(texts).to_json('tweets/texts.json', force_ascii=False)
+# store all the texts, keyed by tweet ID
+texts = {}
+for language_data in tweets.values():
+    for datum in language_data:
+        try:
+            texts[datum.id] = {'lang': datum.lang, 'text': datum.full_text}
+        except AttributeError:
+            texts[datum.id] = {'lang': datum.lang, 'text': datum.text}
+
+# write the texts to file
+pd.Series(texts).to_json('tweets/texts.json', force_ascii=False)
 
 # print the data collected
 for language_data in tweets.values():
@@ -132,5 +151,5 @@ for language_data in tweets.values():
         except AttributeError:
             print(datum.id, ': ', datum.text)
 
-# nlp_data = nlp.analyze(flatten(list(tweets.values())))
-# pd.DataFrame.from_dict(nlp_data, orient='index').to_csv('tweets/data.csv')  # save the data to csv
+nlp_data = nlp.analyze(flatten(list(tweets.values())))
+pd.DataFrame.from_dict(nlp_data, orient='index').to_csv('tweets/data.csv')  # save the data to csv
