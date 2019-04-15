@@ -1,4 +1,4 @@
-,de,fr,ja,ko,sentiment,hashtags,user_mentions,author_followers_count,author_friends_count,author_statuses_count,retweet_count,favorite_count,ADJ,ADV,CC,CS,ET,I,NC,NP,PREF,PRO,V,PUNC
+id,de,fr,ja,ko,sentiment,hashtags,user_mentions,author_followers_count,author_friends_count,author_statuses_count,retweet_count,favorite_count,ADJ,ADV,CC,CS,ET,I,NC,NP,PREF,PRO,V,PUNC
 874048560471224320,0,0,0,1,0.637573,0,0,2624,56,4974,29,51,5,1,0,0,0,1,16,1,0,1,8,9
 1111472200119259136,0,0,1,0,-0.70122,1,0,602,547,35245,16,13,4,2,0,0,0,0,13,0,2,0,21,5
 1112428839244828677,0,1,0,0,0.882995,0,0,371,112,15388,8801,7061,1,0,0,0,0,0,0,0,0,2,2,0
